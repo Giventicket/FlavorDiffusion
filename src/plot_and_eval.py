@@ -63,8 +63,8 @@ def main(args):
     except:
       print("something is wrong with", w)    
         
-  # plot_embedding(args, graph, vectors = embed_dict)
-  evaluate(args, graph, vectors = embed_dict)
+  plot_embedding(args, graph, vectors = embed_dict)
+  # evaluate(args, graph, vectors = embed_dict)
 
 if __name__ == '__main__':
   args = arg_parser()

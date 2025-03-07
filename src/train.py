@@ -95,7 +95,8 @@ def main(args):
 
   trainer = Trainer(
       accelerator="cuda",
-      devices=torch.cuda.device_count() if torch.cuda.is_available() else None,
+      # devices=torch.cuda.device_count() if torch.cuda.is_available() else None,
+      devices=[0],
       max_epochs=epochs,
       callbacks=[checkpoint_callback, lr_callback],
       check_val_every_n_epoch=1,

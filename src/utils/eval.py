@@ -76,7 +76,7 @@ def evaluate(args, graph, vectors):
 
 
     nmis = []
-    for idx in range(100):
+    for idx in range(20):
         nmi = train(X, y, seed = idx)
         print(idx, nmi)
         nmis.append(nmi)

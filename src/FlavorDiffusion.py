@@ -21,6 +21,9 @@ from utils.diffusion_schedulers import GaussianDiffusion
 
 import pickle
 import numpy as np
+import csv
+from tqdm import tqdm
+
 
 def load_augmentive_features(emb_size):
     PICKLE_PATH = "/workspace/FlavorGraph/input/node2fp_revised_1120.pickle"
@@ -96,6 +99,11 @@ class FlavorDiffusion(pl.LightningModule):
       self.encoder_aug = nn.Linear(self.args.hidden_dim, self.aug_dimension)
       self.criterion_aug = nn.BCEWithLogitsLoss()
       
+    self.recon_edge = {}
+    for i in range(emb_size):
+        for j in range(emb_size):
+            self.recon_edge.setdefault(i, {}).setdefault(j, [])
+      
   def train_dataloader(self):
     batch_size = self.args.batch_size
     train_dataloader = GraphDataLoader(
@@ -156,7 +164,7 @@ class FlavorDiffusion(pl.LightningModule):
     adj_matrix = adj_matrix.clamp(-1, 1)  # clamping
 
     xt, epsilon = self.diffusion.sample(adj_matrix, t)
-    xt = xt.clamp(-1, 1)  # 클램핑 추가
+    xt = xt.clamp(-1, 1) 
     
     t = torch.from_numpy(t).float().view(adj_matrix.shape[0])
     
@@ -237,7 +245,7 @@ class FlavorDiffusion(pl.LightningModule):
       skip = self.diffusion.T // steps
       assert self.diffusion.T % steps == 0, f"self.diffusion.T ({self.diffusion.T}) must be divisible by steps ({steps})."
       
-      diffusion_results = []
+      # diffusion_results = []
 
       # Diffusion iterations
       for i in range(steps):
@@ -251,14 +259,15 @@ class FlavorDiffusion(pl.LightningModule):
               )
           else:
               raise ValueError(f"Unknown diffusion type {self.diffusion_type}")
-      """
+
+          """
           diffusion_results.append({
               "step": i,
               "points": points.cpu().numpy(),
               "xt": xt.cpu().detach().numpy() * 0.5 + 0.5,  # 변환 후 저장
               "gt_adj": gt_adj.cpu().detach().numpy()
           })
-      """    
+          """
       
       # np.save(f"diffusion_results_{real_batch_idx.cpu().numpy()}.npy", diffusion_results, allow_pickle=True)
       
@@ -270,6 +279,12 @@ class FlavorDiffusion(pl.LightningModule):
 
       adj_pred = torch.tensor(adj_mat, dtype=torch.float32, device=device)
       gt_adj = torch.tensor(gt_adj, dtype=torch.float32, device=device)
+      
+      for i in range(len(adj_pred[0])):
+        for j in range(len(adj_pred[0][0])):
+            u = points[0][i].item()
+            v = points[0][j].item()
+            self.recon_edge[u][v].append(adj_pred[0][i][j].item())
       
       mse_loss = F.mse_loss(adj_pred, gt_adj, reduction='mean')
 
@@ -287,19 +302,27 @@ class FlavorDiffusion(pl.LightningModule):
     self.model.eval()
     return self.test_step(batch, batch_idx, split='val')
   
-  def test_epoch_end(self, outputs):
-    unmerged_metrics = {}
-    for metrics in outputs:
-      for k, v in metrics.items():
-        if k not in unmerged_metrics:
-          unmerged_metrics[k] = []
-        unmerged_metrics[k].append(v)
+  def on_validation_epoch_end(self):
+    mean_std_edge = {}
+    for u in self.recon_edge:
+        mean_std_edge[u] = {}
+        for v in self.recon_edge[u]:
+            values = self.recon_edge[u][v]
+            if values:
+                mean = np.mean(values)
+                std = np.std(values)
+            else:
+                mean, std = 0, 0
+            mean_std_edge[u][v] = {'mean': mean, 'std': std}
 
-    merged_metrics = {}
-    for k, v in unmerged_metrics.items():
-      merged_metrics[k] = float(np.mean(v))
-    self.logger.log_metrics(merged_metrics, step=self.global_step)
-    
+    with open("./edge_mean_std.csv", mode="w", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(["u", "v", "mean", "std"])
+
+        for u in tqdm(mean_std_edge):
+            for v in mean_std_edge[u]:
+                writer.writerow([u, v, mean_std_edge[u][v]['mean'], mean_std_edge[u][v]['std']])
+  
   def get_total_num_training_steps(self) -> int:
     """Total training steps inferred from datamodule and devices."""
     if self.num_training_steps_cached is not None:
