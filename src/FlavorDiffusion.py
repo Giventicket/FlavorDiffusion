@@ -98,11 +98,13 @@ class FlavorDiffusion(pl.LightningModule):
       self.aug_embeddings, self.aug_dimension, self.binary_masks = load_augmentive_features(emb_size)
       self.encoder_aug = nn.Linear(self.args.hidden_dim, self.aug_dimension)
       self.criterion_aug = nn.BCEWithLogitsLoss()
-      
+    
+    """
     self.recon_edge = {}
     for i in range(emb_size):
         for j in range(emb_size):
             self.recon_edge.setdefault(i, {}).setdefault(j, [])
+    """
       
   def train_dataloader(self):
     batch_size = self.args.batch_size
@@ -245,7 +247,7 @@ class FlavorDiffusion(pl.LightningModule):
       skip = self.diffusion.T // steps
       assert self.diffusion.T % steps == 0, f"self.diffusion.T ({self.diffusion.T}) must be divisible by steps ({steps})."
       
-      # diffusion_results = []
+      diffusion_results = []
 
       # Diffusion iterations
       for i in range(steps):
@@ -260,16 +262,14 @@ class FlavorDiffusion(pl.LightningModule):
           else:
               raise ValueError(f"Unknown diffusion type {self.diffusion_type}")
 
-          """
           diffusion_results.append({
               "step": i,
               "points": points.cpu().numpy(),
               "xt": xt.cpu().detach().numpy() * 0.5 + 0.5,  # 변환 후 저장
               "gt_adj": gt_adj.cpu().detach().numpy()
           })
-          """
       
-      # np.save(f"diffusion_results_{real_batch_idx.cpu().numpy()}.npy", diffusion_results, allow_pickle=True)
+      np.save(f"diffusion_results_{real_batch_idx.cpu().numpy()}.npy", diffusion_results, allow_pickle=True)
       
       if self.diffusion_type == 'gaussian':
           adj_mat = xt.cpu().detach().numpy() * 0.5 + 0.5
@@ -280,11 +280,13 @@ class FlavorDiffusion(pl.LightningModule):
       adj_pred = torch.tensor(adj_mat, dtype=torch.float32, device=device)
       gt_adj = torch.tensor(gt_adj, dtype=torch.float32, device=device)
       
+      """
       for i in range(len(adj_pred[0])):
         for j in range(len(adj_pred[0][0])):
             u = points[0][i].item()
             v = points[0][j].item()
             self.recon_edge[u][v].append(adj_pred[0][i][j].item())
+      """
       
       mse_loss = F.mse_loss(adj_pred, gt_adj, reduction='mean')
 
@@ -303,6 +305,8 @@ class FlavorDiffusion(pl.LightningModule):
     return self.test_step(batch, batch_idx, split='val')
   
   def on_validation_epoch_end(self):
+    pass
+    """
     mean_std_edge = {}
     for u in self.recon_edge:
         mean_std_edge[u] = {}
@@ -322,7 +326,8 @@ class FlavorDiffusion(pl.LightningModule):
         for u in tqdm(mean_std_edge):
             for v in mean_std_edge[u]:
                 writer.writerow([u, v, mean_std_edge[u][v]['mean'], mean_std_edge[u][v]['std']])
-  
+    """
+    
   def get_total_num_training_steps(self) -> int:
     """Total training steps inferred from datamodule and devices."""
     if self.num_training_steps_cached is not None:
