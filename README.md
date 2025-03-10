@@ -138,7 +138,7 @@ If you use **FlavorDiffusion** in your research, please cite:
 @article{FlavorDiffusion2025,
   author = {Seo, Junpyo and Kim, Dongwan and Jeong, Jaewook and Park, Ingyu and Min, Junho},
   title = {FlavorDiffusion: Modeling Food-Chemical Interactions with Diffusion},
-  journal = {Computational Gastronomy Proceedings},
+  workshop = {First Workshop on AI and Scientific Discovery: Directions and Opportunities},
   year = {2025},
   url = {https://github.com/Giventicket/FlavorDiffusion}
 }
