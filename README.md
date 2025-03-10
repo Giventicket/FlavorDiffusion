@@ -140,11 +140,6 @@ If you use **FlavorDiffusion** in your research, please cite:
   title = {FlavorDiffusion: Modeling Food-Chemical Interactions with Diffusion},
   workshop = {First Workshop on AI and Scientific Discovery: Directions and Opportunities},
   year = {2025},
-  url = {https://github.com/Giventicket/FlavorDiffusion}
 }
 ```
-
----
-
-**For more details, check our full research paper**: [FlavorDiffusion Research Paper](https://github.com/Giventicket/FlavorDiffusion).
 
